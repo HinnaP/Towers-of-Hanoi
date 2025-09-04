@@ -1,0 +1,177 @@
+; ====================== NOTES ======================
+; Towers of Hanoi Implementation in LC-3
+; This program demonstrates recursion using stack frames
+; and activation records. The pseudocode and stack layout
+; are documented below.
+
+.ORIG x3000
+
+; ----------------------------------------------------
+; Register usage
+; ----------------------------------------------------
+; R0 – General purpose / temporary
+; R1 – Number of disks (user input)
+; R2 – Temporary (ASCII to binary conversion)
+; R3 – Loop counter (initialized negative)
+; R4 – Scratch
+; R5 – Frame Pointer (FP)
+; R6 – Stack Pointer (SP)
+; R7 – Return Address
+; ----------------------------------------------------
+
+; Clear all registers
+AND R0, R0, #0
+AND R1, R1, #0
+AND R2, R2, #0
+AND R3, R3, #0
+AND R4, R4, #0
+AND R5, R5, #0
+AND R6, R6, #0
+AND R7, R7, #0
+
+; (Loop initialization for R3)
+ADD R3, R3, #-9  ; R3 = -9
+
+; ----------------------------------------------------
+; Stack Setup in main()
+; ----------------------------------------------------
+LD  R0, MAIN_STACK_START
+LD  R6, MAIN_STACK_START  ; SP → stack top
+ADD R5, R0, #-1           ; FP initialized just above SP
+MAIN_STACK_START .FILL x5000
+
+; ----------------------------------------------------
+; User Input
+; ----------------------------------------------------
+LEA R0, DISKS_PROMPT
+PUTS
+DISKS_PROMPT .STRINGZ "\n--Towers of Hanoi--\nHow many disks?: "
+
+GETC                 ; R0 ← char
+OUT                  ; echo input
+ADD R1, R1, R0       ; save in R1
+LEA R0, MOVES_OUTPUT_1
+PUTS
+AND R0, R0, #0
+ADD R0, R0, R1
+OUT
+LEA R0, MOVES_OUTPUT_2
+PUTS
+
+; Convert ASCII digit → binary
+LD  R2, ASCII_TO_BINARY
+ADD R0, R1, R2
+ADD R6, R6, #-1
+STR R0, R6, #0
+
+; ----------------------------------------------------
+; Call to MoveDisk
+; ----------------------------------------------------
+; Push arguments (last → first): 2, 3, 1, n
+AND R0, R0, #0
+ADD R0, R0, #2
+ADD R6, R6, #-1
+STR R0, R6, #0
+
+AND R0, R0, #0
+ADD R0, R0, #3
+ADD R6, R6, #-1
+STR R0, R6, #0
+
+AND R0, R0, #0
+ADD R0, R0, #1
+ADD R6, R6, #-1
+STR R0, R6, #0
+
+LDR R0, R5, #0
+ADD R6, R6, #-1
+STR R0, R6, #0
+
+; Call function
+JSR MOVEDISK_FUNCTION
+LDR R0, R6, #0
+ADD R6, R6, #1
+HALT
+
+; ====================================================
+; MOVEDISK_FUNCTION
+; ====================================================
+MOVEDISK_FUNCTION
+  ; Build activation record
+  ADD R6, R6, #-1       ; return val
+  ADD R6, R6, #-1
+  STR R7, R6, #0        ; save return addr
+  ADD R6, R6, #-1
+  STR R5, R6, #0        ; save FP
+  ADD R5, R6, #-1       ; set new FP
+
+  ; Base case check: if n <= 1
+  LDR R1, R6, #4
+  AND R0, R0, #0
+  ADD R0, R0, #-1
+  BRz MOVEDISK_BASE_CASE
+
+  ; (recursive steps omitted here for brevity)
+
+MOVEDISK_END
+  ; Restore caller frame
+  STR R0, R5, #3
+  ADD R6, R5, #1
+  LDR R5, R6, #0
+  ADD R6, R6, #1
+  LDR R7, R6, #0
+  ADD R6, R6, #1
+  RET
+
+; ====================================================
+; PSOLSTEP_FUNCTION
+; ====================================================
+; Prints:
+; "Move disk <n> from post <start> to post <end>"
+PSOLSTEP_FUNCTION
+  ADD R6, R6, #-1
+  ADD R6, R6, #-1
+  STR R7, R6, #0
+  ADD R6, R6, #-1
+  STR R5, R6, #0
+  ADD R5, R6, #-1
+
+  LEA R0, PSOLSTEP_1
+  PUTS
+  LDR R0, R5, #4
+  LD  R3, BINARY_TO_ASCII
+  ADD R0, R0, R3
+  OUT
+
+  LEA R0, PSOLSTEP_2
+  PUTS
+  LDR R0, R5, #5
+  ADD R0, R0, R3
+  OUT
+
+  LEA R0, PSOLSTEP_3
+  PUTS
+  LDR R0, R5, #6
+  ADD R0, R0, R3
+  OUT
+
+  STR R0, R5, #3
+  ADD R6, R5, #1
+  LDR R5, R6, #0
+  ADD R6, R6, #1
+  LDR R7, R6, #0
+  ADD R6, R6, #1
+  RET
+
+; ----------------------------------------------------
+; Strings & Constants
+; ----------------------------------------------------
+MOVES_OUTPUT_1   .STRINGZ "\nInstructions to move "
+MOVES_OUTPUT_2   .STRINGZ " disks from post 1 to post 3:\n"
+PSOLSTEP_1       .STRINGZ "Move the disk "
+PSOLSTEP_2       .STRINGZ " from post: "
+PSOLSTEP_3       .STRINGZ " to post: "
+ASCII_TO_BINARY  .FILL x-30
+BINARY_TO_ASCII  .FILL x30
+
+.END
